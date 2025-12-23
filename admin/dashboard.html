@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat Agent - Admin Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 16px;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .panel-header {
+            font-size: 20px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            color: #4a5568;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="number"],
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .color-picker-group {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .color-input-wrapper {
+            position: relative;
+        }
+
+        .color-input-wrapper input[type="color"] {
+            width: 100%;
+            height: 45px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .button-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .button-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .button-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .button-secondary:hover {
+            background: #cbd5e0;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .preview-panel {
+            position: sticky;
+            top: 20px;
+        }
+
+        .preview-window {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 20px;
+            min-height: 400px;
+            position: relative;
+            border: 2px dashed #cbd5e0;
+        }
+
+        .chat-widget-preview {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 320px;
+            height: 450px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .widget-header {
+            padding: 15px;
+            color: white;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .widget-body {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background: #f7fafc;
+        }
+
+        .widget-footer {
+            padding: 12px;
+            background: white;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .widget-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .message-bubble {
+            background: white;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .success-message {
+            background: #48bb78;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .tab-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .tab {
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-weight: 500;
+            color: #718096;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .preview-panel {
+                position: static;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🤖 AI Chat Agent Dashboard</h1>
+            <p>Configure and customize your intelligent assistant</p>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-grid">
+            <!-- Settings Panel -->
+            <div class="panel">
+                <div id="success-message" class="success-message">
+                    ✓ Settings saved successfully!
+                </div>
+
+                <!-- Tabs -->
+                <div class="tab-group">
+                    <button class="tab active" onclick="switchTab('appearance')">Appearance</button>
+                    <button class="tab" onclick="switchTab('behavior')">Behavior</button>
+                    <button class="tab" onclick="switchTab('ai-config')">AI Settings</button>
+                    <button class="tab" onclick="switchTab('hours')">Business Hours</button>
+                </div>
+
+                <!-- Appearance Tab -->
+                <div id="appearance-tab" class="tab-content active">
+                    <div class="panel-header">Widget Appearance</div>
+
+                    <div class="form-group">
+                        <label>Widget Position</label>
+                        <select id="widget_position" onchange="updatePreview()">
+                            <option value="bottom-right">Bottom Right</option>
+                            <option value="bottom-left">Bottom Left</option>
+                            <option value="top-right">Top Right</option>
+                            <option value="top-left">Top Left</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Color Scheme</label>
+                        <div class="color-picker-group">
+                            <div class="color-input-wrapper">
+                                <label style="font-size: 12px; color: #718096;">Primary</label>
+                                <input type="color" id="primary_color" value="#007bff" onchange="updatePreview()">
+                            </div>
+                            <div class="color-input-wrapper">
+                                <label style="font-size: 12px; color: #718096;">Secondary</label>
+                                <input type="color" id="secondary_color" value="#6c757d" onchange="updatePreview()">
+                            </div>
+                            <div class="color-input-wrapper">
+                                <label style="font-size: 12px; color: #718096;">Text</label>
+                                <input type="color" id="text_color" value="#ffffff" onchange="updatePreview()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Welcome Message</label>
+                        <textarea id="welcome_message" onchange="updatePreview()"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Widget Size</label>
+                        <select id="widget_size" onchange="updatePreview()">
+                            <option value="small">Small</option>
+                            <option value="medium">Medium</option>
+                            <option value="large">Large</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Behavior Tab -->
+                <div id="behavior-tab" class="tab-content">
+                    <div class="panel-header">Widget Behavior</div>
+
+                    <div class="form-group">
+                        <label>Auto-Open Delay (seconds)</label>
+                        <input type="number" id="auto_open_delay" min="0" max="60" value="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Show On Pages</label>
+                        <select id="show_on_pages">
+                            <option value="all">All Pages</option>
+                            <option value="homepage">Homepage Only</option>
+                            <option value="products">Product Pages Only</option>
+                            <option value="custom">Custom URLs</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="hide_on_mobile"> Hide on Mobile Devices
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="typing_indicator" checked> Show Typing Indicator
+                        </label>
+                    </div>
+                </div>
+
+                <!-- AI Config Tab -->
+                <div id="ai-config-tab" class="tab-content">
+                    <div class="panel-header">AI Configuration</div>
+
+                    <div class="form-group">
+                        <label>AI Model</label>
+                        <select id="ai_model">
+                            <option value="llama-3.3-70b-versatile">Groq Llama 3.3 70B (Recommended)</option>
+                            <option value="gpt-4o-mini">OpenAI GPT-4o Mini</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Temperature (Creativity: 0-1)</label>
+                        <input type="number" id="temperature" min="0" max="1" step="0.1" value="0.7">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Response Length</label>
+                        <select id="response_length">
+                            <option value="short">Short & Concise</option>
+                            <option value="medium">Medium</option>
+                            <option value="detailed">Detailed</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Fallback Message</label>
+                        <textarea id="fallback_message"></textarea>
+                    </div>
+                </div>
+
+                <!-- Business Hours Tab -->
+                <div id="hours-tab" class="tab-content">
+                    <div class="panel-header">Business Hours</div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="business_hours_enabled"> Enable Business Hours
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Timezone</label>
+                        <select id="timezone">
+                            <option value="Asia/Dubai">UAE (GST)</option>
+                            <option value="America/New_York">US Eastern</option>
+                            <option value="Europe/London">UK</option>
+                            <option value="Asia/Singapore">Singapore</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>After Hours Message</label>
+                        <textarea id="after_hours_message"></textarea>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="button-group">
+                    <button class="button button-primary" onclick="saveSettings()">💾 Save Settings</button>
+                    <button class="button button-secondary" onclick="resetSettings()">↺ Reset to Defaults</button>
+                </div>
+            </div>
+
+            <!-- Live Preview Panel -->
+            <div class="panel preview-panel">
+                <div class="panel-header">Live Preview</div>
+                <div class="preview-window">
+                    <div id="chat-widget-preview" class="chat-widget-preview">
+                        <div class="widget-header" id="preview-header">
+                            <span>🤖</span>
+                            <span>AI Assistant</span>
+                        </div>
+                        <div class="widget-body">
+                            <div class="message-bubble" id="preview-welcome">
+                                Hello! I'm your AI assistant. How can I help you today?
+                            </div>
+                        </div>
+                        <div class="widget-footer">
+                            <input type="text" class="widget-input" placeholder="Type a message...">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load current settings on page load
+        window.addEventListener('DOMContentLoaded', loadSettings);
+
+        async function loadSettings() {
+            try {
+                const response = await fetch('/admin/settings');
+                const settings = await response.json();
+                
+                // Populate form fields
+                Object.keys(settings).forEach(key => {
+                    const element = document.getElementById(key);
+                    if (element) {
+                        if (element.type === 'checkbox') {
+                            element.checked = settings[key];
+                        } else {
+                            element.value = settings[key];
+                        }
+                    }
+                });
+                
+                updatePreview();
+            } catch (error) {
+                console.error('Error loading settings:', error);
+            }
+        }
+
+        async function saveSettings() {
+            const settings = {
+                widget_position: document.getElementById('widget_position').value,
+                primary_color: document.getElementById('primary_color').value,
+                secondary_color: document.getElementById('secondary_color').value,
+                text_color: document.getElementById('text_color').value,
+                welcome_message: document.getElementById('welcome_message').value,
+                widget_size: document.getElementById('widget_size').value,
+                auto_open_delay: parseInt(document.getElementById('auto_open_delay').value),
+                show_on_pages: document.getElementById('show_on_pages').value,
+                hide_on_mobile: document.getElementById('hide_on_mobile').checked,
+                typing_indicator: document.getElementById('typing_indicator').checked,
+                ai_model: document.getElementById('ai_model').value,
+                temperature: parseFloat(document.getElementById('temperature').value),
+                response_length: document.getElementById('response_length').value,
+                fallback_message: document.getElementById('fallback_message').value,
+                business_hours_enabled: document.getElementById('business_hours_enabled').checked,
+                timezone: document.getElementById('timezone').value,
+                after_hours_message: document.getElementById('after_hours_message').value
+            };
+
+            try {
+                const response = await fetch('/admin/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    showSuccessMessage();
+                }
+            } catch (error) {
+                alert('Error saving settings: ' + error.message);
+            }
+        }
+
+        async function resetSettings() {
+            if (confirm('Are you sure you want to reset all settings to defaults?')) {
+                try {
+                    await fetch('/admin/settings/reset', { method: 'POST' });
+                    location.reload();
+                } catch (error) {
+                    alert('Error resetting settings: ' + error.message);
+                }
+            }
+        }
+
+        function showSuccessMessage() {
+            const msg = document.getElementById('success-message');
+            msg.style.display = 'block';
+            setTimeout(() => {
+                msg.style.display = 'none';
+            }, 3000);
+        }
+
+        function updatePreview() {
+            const primaryColor = document.getElementById('primary_color').value;
+            const welcomeMsg = document.getElementById('welcome_message').value;
+            
+            document.getElementById('preview-header').style.background = primaryColor;
+            document.getElementById('preview-welcome').textContent = welcomeMsg;
+        }
+
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>
