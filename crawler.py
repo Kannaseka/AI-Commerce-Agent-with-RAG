@@ -16,7 +16,7 @@ rag = RAGHandler()
 
 def is_valid_url(url):
     parsed = urlparse(url)
-    return bool(parsed.netloc) and bool(parsed.scheme) and "rozebiohealth.com" in parsed.netloc
+    return bool(parsed.netloc) and bool(parsed.scheme) and "yourdomain.com" in parsed.netloc
 
 def clean_text(html_content):
     soup = BeautifulSoup(html_content, 'html.parser')
@@ -47,7 +47,7 @@ def crawl():
         visited_urls.add(current_url)
         
         try:
-            response = requests.get(current_url, headers={"User-Agent": "RozeBioHealthBot/1.0"}, timeout=10)
+            response = requests.get(current_url, headers={"User-Agent": "RZBBot/1.0"}, timeout=10)
             if response.status_code != 200:
                 print(f"Failed to fetch {current_url}: {response.status_code}")
                 continue
