@@ -1,11 +1,11 @@
 /**
- * Roze AI Chat Widget
+ * AI Chat Widget
  * Embeddable chat widget for websites
  */
 
-(function() {
+(function () {
     'use strict';
-    
+
     // Configuration (loaded from backend)
     let config = {
         apiEndpoint: 'http://localhost:8002',
@@ -27,7 +27,7 @@
         try {
             const response = await fetch(`${config.apiEndpoint}/admin/settings`);
             const settings = await response.json();
-            
+
             // Update config with backend settings
             config = {
                 ...config,
@@ -38,7 +38,7 @@
                 welcomeMessage: settings.welcome_message || config.welcomeMessage,
                 autoOpenDelay: settings.auto_open_delay || 0
             };
-            
+
             applyStyles();
         } catch (error) {
             console.warn('Using default widget configuration');
@@ -48,7 +48,7 @@
     // Create widget HTML
     function createWidget() {
         const widgetHTML = `
-            <div id="roze-chat-widget" class="roze-chat-widget">
+            <div id="ai-chat-widget" class="ai-chat-widget">
                 <!-- Chat Button -->
                 <div id="roze-chat-button" class="roze-chat-button" onclick="window.RozeChat.toggle()">
                     <span class="roze-chat-icon">${config.botAvatar}</span>
@@ -62,7 +62,7 @@
                         <div class="roze-chat-header-content">
                             <span class="roze-chat-avatar">${config.botAvatar}</span>
                             <div class="roze-chat-title">
-                                <strong>Roze AI Assistant</strong>
+                                <strong>AI Assistant</strong>
                                 <span class="roze-chat-status">Online</span>
                             </div>
                         </div>
@@ -107,7 +107,7 @@
     function applyStyles() {
         const styleId = 'roze-chat-styles';
         let styleElement = document.getElementById(styleId);
-        
+
         if (styleElement) {
             styleElement.remove();
         }
@@ -351,7 +351,7 @@
         isOpen = !isOpen;
         const chatWindow = document.getElementById('roze-chat-window');
         const badge = document.getElementById('roze-unread-badge');
-        
+
         if (isOpen) {
             chatWindow.style.display = 'flex';
             badge.style.display = 'none';
@@ -364,7 +364,7 @@
     async function sendMessage() {
         const input = document.getElementById('roze-chat-input');
         const message = input.value.trim();
-        
+
         if (!message) return;
 
         // Add user message to UI
@@ -383,7 +383,7 @@
             });
 
             const data = await response.json();
-            
+
             // Hide typing indicator
             showTypingIndicator(false);
 
@@ -403,14 +403,14 @@
         const messagesContainer = document.getElementById('roze-chat-messages');
         const messageDiv = document.createElement('div');
         messageDiv.className = `roze-message roze-message-${sender}`;
-        
+
         const contentDiv = document.createElement('div');
         contentDiv.className = 'roze-message-content';
         contentDiv.textContent = text;
-        
+
         messageDiv.appendChild(contentDiv);
         messagesContainer.appendChild(messageDiv);
-        
+
         // Scroll to bottom
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
@@ -459,7 +459,7 @@
     }
 
     // Public API
-    window.RozeChat = {
+    window.AIChat = {
         toggle,
         sendMessage,
         init

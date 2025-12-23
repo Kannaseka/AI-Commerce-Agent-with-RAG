@@ -152,7 +152,7 @@ def generate_bot_response(user_message: str) -> str:
         return cached_response
     
     messages = [
-        {"role": "system", "content": "You are a professional AI assistant for Roze BioHealth. Use the available tools to answer customer questions about products, orders, and general information accurately."},
+        {"role": "system", "content": "You are a professional AI assistant for Your Brand. Use the available tools to answer customer questions about products, orders, and general information accurately."},
         {"role": "user", "content": user_message}
     ]
 
@@ -277,7 +277,7 @@ def generate_bot_response(user_message: str) -> str:
                 
                 # Simple completion without tools
                 fallback_messages = [
-                    {"role": "system", "content": "You are a professional assistant for Roze BioHealth. Answer customer questions based on the provided context."},
+                    {"role": "system", "content": "You are a professional assistant for Your Brand. Answer customer questions based on the provided context."},
                     {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {user_message}"}
                 ]
                 
