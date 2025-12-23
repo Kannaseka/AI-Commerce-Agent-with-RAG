@@ -1,11 +1,11 @@
 <?php
 /**
- * Plugin Name: Roze AI Chat Assistant
- * Plugin URI: https://rozebiohealth.com
+ * Plugin Name:  AI Chat Assistant
+ * Plugin URI: 
  * Description: Professional AI-powered chat assistant for your WooCommerce store. Handles product queries, order tracking, and customer support automatically.
  * Version: 1.0.0
- * Author: Roze BioHealth
- * Author URI: https://rozebiohealth.com
+ * Author: 
+ * Author URI: 
  * License: GPL-2.0+
  * Text Domain: roze-ai-chat
  */

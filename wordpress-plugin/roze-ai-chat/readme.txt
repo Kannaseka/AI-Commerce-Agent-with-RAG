@@ -1,5 +1,5 @@
 === Roze AI Chat Assistant ===
-Contributors: rozebiohealth
+Contributors: Kannan
 Tags: ai, chat, woocommerce, customer-support, chatbot
 Requires at least: 5.0
 Tested up to: 6.4
@@ -42,9 +42,7 @@ Roze AI Chat Assistant is a cutting-edge conversational AI that integrates seaml
 * PHP 7.4 or higher
 * AI Backend running (FastAPI + Python)
 
-= Support =
 
-For support and documentation, visit [rozebiohealth.com](https://rozebiohealth.com)
 
 == Installation ==
 
@@ -95,4 +93,4 @@ Absolutely! The chat widget is fully responsive and works perfectly on mobile de
 == Upgrade Notice ==
 
 = 1.0.0 =
-Initial release of Roze AI Chat Assistant.
+Initial release of AI Chat Assistant.
