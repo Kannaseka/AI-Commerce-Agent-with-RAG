@@ -5,7 +5,7 @@ import time
 from rag import RAGHandler
 
 # Configuration
-START_URL = "https://rozebiohealth.com"
+START_URL = "https://yourdomain.com"
 MAX_PAGES = 50  # Limit to 50 pages for this initial run to be fast
 DELAY = 1  # Seconds between requests
 
