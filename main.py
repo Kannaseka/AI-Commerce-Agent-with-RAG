@@ -237,111 +237,65 @@ def generate_bot_response(user_message: str, platform: str = "whatsapp") -> BotR
 
             if function_name == "search_store_products":
                 query = args.get("query", "")
-                if not query:
-                    products = woo.get_products() # Catalog
-                else:
-                    products = woo.get_products(search_term=query) # Search
-                
+                products = woo.get_products(search_term=query) if query else woo.get_products()
                 if products:
-                    found_products = products[:5] # Store for Rich UI
+                    found_products = products[:5]
                     tool_output = "FOUND LIVE PRODUCTS:\n"
-                    # Limit to 5
                     for p in products[:5]:
                         tool_output += woo.format_product_for_chat(p) + "\n---\n"
                 else:
-                    tool_output = "No products found."
+                    tool_output = "No products found matching your request."
 
             elif function_name == "check_order_status":
                 order_id = args.get("order_id")
                 order = woo.get_order_by_id(order_id)
                 if order:
-                    found_order = order # Store for Rich UI
+                    found_order = order
                     tool_output = f"ORDER STATUS:\nID: {order['id']}\nStatus: {order['status']}\nTotal: {order['currency']} {order['total']}\nItems: {order['line_items']}"
                 else:
-                    tool_output = "Order ID not found."
+                    tool_output = "Order not found. Please check the ID."
 
             elif function_name == "search_knowledge_base":
-                query = args.get("query", "") # Default to empty string to avoid None crash
+                query = args.get("query", "")
                 if not query:
                     tool_output = "Please provide a topic to search."
                 else:
                     docs = rag.query(query)
-                    if docs:
-                        tool_output = f"KNOWLEDGE BASE INFO:\n{docs}"
-                    else:
-                        tool_output = "No relevant info found in knowledge base."
+                    tool_output = f"KNOWLEDGE BASE INFO:\n{docs}" if docs else "No relevant info found."
 
-            # Add tool result to conversation history
-            messages.append(
-                {
-                    "tool_call_id": tool_call.id,
-                    "role": "tool",
-                    "name": function_name,
-                    "content": str(tool_output), # Ensure string
-                }
-            )
-
-            # --- NEW: Cart tool logic ---
-            if function_name == "manage_cart":
+            elif function_name == "manage_cart":
                 action = args.get("action")
                 p_id = args.get("product_id")
                 qty = args.get("quantity", 1)
-                
-                # Mock session ID (in real app, use user_id from auth or cookie)
-                # For this demo, we'll just use a fixed ID or derive from message for simplicity
-                # In main.py context, we don't have request data easily in this function signature
-                # Let's rely on a global 'demo_user' for now given the constraints, or pass session_id
                 session_id = "demo_user" 
 
                 if action == "add" and p_id:
-                    # We need to find the product details first to add to cart
-                    # In a real app, CartManager might check DB. Here we fetch from Woo
                     try:
-                        # Optimization: We need efficient lookup. 
-                        # WooHandler usually searches. Let's assume we can get by ID if we implement it, 
-                        # or search by ID. 
-                        # For now, let's assume valid product from previous text.
-                        # We will fetch product to get price/name
-                        # Since woo.get_products returns list, and we don't have get_by_id exposed nicely yet except order
-                        # Let's do a search or assume details passed? 
-                        # Better: Update WooHandler or just search.
                         prod_list = woo.get_products(search_term=p_id) 
-                        # If p_id is actually a name or partial, this works. 
-                        # If it's a numeric ID, search might fail dep on Woo setup.
-                        # Let's assume the AI passes the NAME or ID and we try our best.
-                        
-                        target_product = None
-                        if prod_list:
-                             target_product = prod_list[0] # Pick first match
-                        
+                        target_product = prod_list[0] if prod_list else None
                         if target_product:
                             cart_summary = cart_manager.add_item(session_id, target_product, qty)
                             tool_output = f"Added {target_product['name']} to cart. Total: {cart_summary['total']}"
-                            # We can also attach this to the response so UI updates immediately
-                            # But we are in the loop. We need to persist this info to return it later.
-                            # We'll attach it to the final response object.
-                            # For now, let's store it in a way we can retrieve after the loop
-                            # We will re-fetch cart state at the end.
                         else:
-                            tool_output = "Product found."
+                            tool_output = "Product not found to add to cart."
                     except Exception as e:
                         tool_output = f"Error adding to cart: {str(e)}"
-                
                 elif action == "view":
                     cart = cart_manager.get_cart_summary(session_id)
                     tool_output = f"Cart contains {cart['count']} items. Total: {cart['total']}"
-                
                 elif action == "clear":
                     cart_manager.clear_cart(session_id)
                     tool_output = "Cart cleared."
+                else:
+                    tool_output = f"Action {action} performed on cart."
 
-                # ADD PROPER TOOL MESSAGE (Don't overwrite the assistant message!)
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "name": function_name,
-                    "content": str(tool_output)
-                })
+            # ADD PROPER TOOL MESSAGE (Standard OpenAI/Groq sequence)
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "name": function_name,
+                "content": str(tool_output)
+            })
 
         # 5. Second Call: AI generates final answer using tool outputs
         final_completion = client.chat.completions.create(
