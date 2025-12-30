@@ -23,6 +23,8 @@
     let isRecording = false;
     let recognition = null;
     let isTyping = false;
+    let sessionId = localStorage.getItem('roze_session_id') || ('sess_' + Math.random().toString(36).substr(2, 9));
+    localStorage.setItem('roze_session_id', sessionId);
 
     // --- UTILS ---
 
@@ -503,7 +505,7 @@
             const res = await fetch(`${config.apiEndpoint}/api/test-chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text })
+                body: JSON.stringify({ message: text, session_id: sessionId })
             });
             const data = await res.json();
 

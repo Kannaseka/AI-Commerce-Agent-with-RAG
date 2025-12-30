@@ -18,6 +18,7 @@ from cache_handler import ResponseCache
 from settings_manager import SettingsManager
 from analytics_manager import AnalyticsManager
 from cart_manager import CartManager
+from memory_manager import MemoryManager
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -42,6 +43,7 @@ woo = WooCommerceHandler()
 settings_manager = SettingsManager()
 analytics = AnalyticsManager()
 cart_manager = CartManager()
+memory = MemoryManager()
 
 # Initialize Groq client (OpenAI-compatible)
 client = OpenAI(
@@ -59,6 +61,7 @@ MODEL_NAME = "llama-3.3-70b-versatile"  # Groq's best model for production
 
 class TestMessage(BaseModel):
     message: str
+    session_id: Optional[str] = "web_demo"
 
 @app.get("/")
 def read_root():
@@ -178,7 +181,7 @@ class BotResponse(BaseModel):
     cart_state: Optional[dict] = None  # New field for cart UI updates
     function_call: Optional[str] = None
 
-def generate_bot_response(user_message: str, platform: str = "whatsapp") -> BotResponse:
+def generate_bot_response(user_message: str, session_id: str = "demo_user", platform: str = "whatsapp") -> BotResponse:
 
     """
     Core logic: Agentic Tool Use (MCP Style).
@@ -195,9 +198,13 @@ def generate_bot_response(user_message: str, platform: str = "whatsapp") -> BotR
         return BotResponse(text=cached_response_str)
     
     messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": user_message}
+        {"role": "system", "content": SYSTEM_PROMPT}
     ]
+    
+    # 2. Get history and append current message
+    history = memory.get_history(session_id)
+    messages.extend(history)
+    messages.append({"role": "user", "content": user_message})
 
     try:
         # 2. First Call: Let AI decide if it needs tools
@@ -269,7 +276,7 @@ def generate_bot_response(user_message: str, platform: str = "whatsapp") -> BotR
                 action = args.get("action")
                 p_id = args.get("product_id")
                 qty = args.get("quantity", 1)
-                session_id = "demo_user" 
+                # session_id passed from function signature
 
                 if action == "add" and p_id:
                     try:
@@ -335,7 +342,7 @@ def generate_bot_response(user_message: str, platform: str = "whatsapp") -> BotR
 
         # FETCH FINAL CART STATE
         # If any cart action happened, we want to send the latest state
-        current_cart = cart_manager.get_cart_summary("demo_user")
+        current_cart = cart_manager.get_cart_summary(session_id)
 
         # Normalize products for UI (Web Widget)
         sanitized_products = []
@@ -348,6 +355,10 @@ def generate_bot_response(user_message: str, platform: str = "whatsapp") -> BotR
             else:
                 ui_p["image_url"] = "https://placehold.co/100?text=No+Image"
             sanitized_products.append(ui_p)
+
+        # 6. Save to Memory
+        memory.add_message(session_id, "user", user_message)
+        memory.add_message(session_id, "assistant", final_response_text)
 
         return BotResponse(
             text=final_response_text,
@@ -442,7 +453,7 @@ def process_message(wa_id: str, user_message: str):
     send_whatsapp_message(wa_id, status_msg)
 
     # 2. Logic
-    bot_response = generate_bot_response(user_message, platform="whatsapp")
+    bot_response = generate_bot_response(user_message, session_id=wa_id, platform="whatsapp")
     
     # 3. Final Response - Flatten for WhatsApp
     # WhatsApp can't show carousels easily (unless interactive messages, but keeping it simple text for now)
@@ -498,7 +509,7 @@ async def test_chat(message: TestMessage):
     import time
     start_time = time.time()
     
-    response_data = generate_bot_response(message.message, platform="web")
+    response_data = generate_bot_response(message.message, session_id=message.session_id, platform="web")
     
     # Track analytics
     response_time_ms = int((time.time() - start_time) * 1000)
