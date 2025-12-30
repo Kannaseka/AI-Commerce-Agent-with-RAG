@@ -1,20 +1,21 @@
 === Roze AI Chat Assistant ===
-Contributors: Kannan
+Contributors: rozebiohealth
 Tags: ai, chat, woocommerce, customer-support, chatbot
 Requires at least: 5.0
 Tested up to: 6.4
 Stable tag: 1.0.0
-Requires PHP: 7.4
 License: GPLv2 or later
-License URI: https://www.gnu.org/licenses/gpl-2.0.html
+License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Professional AI-powered chat assistant for WooCommerce stores. Handles product queries, order tracking, and customer support automatically.
+Professional AI-powered chat assistant for your WooCommerce store. Handles product queries, order tracking, and customer support automatically.
 
 == Description ==
 
-**Transform Your Customer Service with AI**
+Transform your customer support with an intelligent AI assistant. This plugin adds a premium chat widget to your site that links to your AI backend.
 
-Roze AI Chat Assistant is a cutting-edge conversational AI that integrates seamlessly with your WooCommerce store. It provides instant, accurate responses to customer queries 24/7.
+== Support ==
+
+For support and documentation, visit [rozebiohealth.com](https://rozebiohealth.com)
 
 = Features =
 

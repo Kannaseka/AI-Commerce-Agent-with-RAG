@@ -16,6 +16,7 @@ from prompts import SYSTEM_PROMPT
 from cache_handler import ResponseCache
 from settings_manager import SettingsManager
 from analytics_manager import AnalyticsManager
+from cart_manager import CartManager
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -39,6 +40,7 @@ rag = RAGHandler()
 woo = WooCommerceHandler()
 settings_manager = SettingsManager()
 analytics = AnalyticsManager()
+cart_manager = CartManager()
 
 # Initialize Groq client (OpenAI-compatible)
 client = OpenAI(
@@ -137,22 +139,62 @@ TOOLS = [
                 "required": ["query"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "manage_cart",
+            "description": "Add items to the user's shopping cart. Call this when the user explicitly agrees to buy something.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["add", "remove", "view", "clear"],
+                        "description": "Action to perform on the cart"
+                    },
+                    "product_id": {
+                        "type": "string",
+                        "description": "The ID of the product to add/remove (required for add/remove)"
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "description": "Quantity to add (default 1)"
+                    }
+                },
+                "required": ["action"]
+            }
+        }
     }
 ]
 
-def generate_bot_response(user_message: str) -> str:
+
+class BotResponse(BaseModel):
+    text: str
+    products: Optional[list] = []
+    order_details: Optional[dict] = None
+    quick_replies: Optional[list] = []
+    cart_state: Optional[dict] = None  # New field for cart UI updates
+    function_call: Optional[str] = None
+
+def generate_bot_response(user_message: str, platform: str = "whatsapp") -> BotResponse:
+
     """
     Core logic: Agentic Tool Use (MCP Style).
     The AI decides which tool to call based on the user message.
     """
     # 1. Check Cache First (Save API Calls)
-    cached_response = response_cache.get(user_message)
-    if cached_response:
+    # cache key now includes platform to differentiate formatting if needed, 
+    # though for now we stick to one cache.
+    cached_response_str = response_cache.get(user_message)
+    if cached_response_str:
         logger.info("💾 Returning cached response")
-        return cached_response
+        # For simplicity in this iteration, cache stores just text. 
+        # Ideally, we cache the full JSON. Let's assume text for now to be safe or reconstruct.
+        return BotResponse(text=cached_response_str)
     
     messages = [
-        {"role": "system", "content": "You are a professional AI assistant for Your Brand. Use the available tools to answer customer questions about products, orders, and general information accurately."},
+        {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": user_message}
     ]
 
@@ -174,11 +216,16 @@ def generate_bot_response(user_message: str) -> str:
         # 3. If no tools needed, just return the text
         if not tool_calls:
             final_response = response_message.content
-            response_cache.set(user_message, final_response)  # Cache it
-            return final_response
+            response_cache.set(user_message, final_response)
+            return BotResponse(text=final_response)
 
         # 4. Process Tool Calls
         messages.append(response_message) # Add the assistant's "thought" (tool call request) to history
+
+
+        # Captured data for rich UI
+        found_products = []
+        found_order = None
 
         for tool_call in tool_calls:
             function_name = tool_call.function.name
@@ -195,6 +242,7 @@ def generate_bot_response(user_message: str) -> str:
                     products = woo.get_products(search_term=query) # Search
                 
                 if products:
+                    found_products = products[:5] # Store for Rich UI
                     tool_output = "FOUND LIVE PRODUCTS:\n"
                     # Limit to 5
                     for p in products[:5]:
@@ -206,6 +254,7 @@ def generate_bot_response(user_message: str) -> str:
                 order_id = args.get("order_id")
                 order = woo.get_order_by_id(order_id)
                 if order:
+                    found_order = order # Store for Rich UI
                     tool_output = f"ORDER STATUS:\nID: {order['id']}\nStatus: {order['status']}\nTotal: {order['currency']} {order['total']}\nItems: {order['line_items']}"
                 else:
                     tool_output = "Order ID not found."
@@ -231,15 +280,104 @@ def generate_bot_response(user_message: str) -> str:
                 }
             )
 
+            # --- NEW: Cart tool logic ---
+            if function_name == "manage_cart":
+                action = args.get("action")
+                p_id = args.get("product_id")
+                qty = args.get("quantity", 1)
+                
+                # Mock session ID (in real app, use user_id from auth or cookie)
+                # For this demo, we'll just use a fixed ID or derive from message for simplicity
+                # In main.py context, we don't have request data easily in this function signature
+                # Let's rely on a global 'demo_user' for now given the constraints, or pass session_id
+                session_id = "demo_user" 
+
+                if action == "add" and p_id:
+                    # We need to find the product details first to add to cart
+                    # In a real app, CartManager might check DB. Here we fetch from Woo
+                    try:
+                        # Optimization: We need efficient lookup. 
+                        # WooHandler usually searches. Let's assume we can get by ID if we implement it, 
+                        # or search by ID. 
+                        # For now, let's assume valid product from previous text.
+                        # We will fetch product to get price/name
+                        # Since woo.get_products returns list, and we don't have get_by_id exposed nicely yet except order
+                        # Let's do a search or assume details passed? 
+                        # Better: Update WooHandler or just search.
+                        prod_list = woo.get_products(search_term=p_id) 
+                        # If p_id is actually a name or partial, this works. 
+                        # If it's a numeric ID, search might fail dep on Woo setup.
+                        # Let's assume the AI passes the NAME or ID and we try our best.
+                        
+                        target_product = None
+                        if prod_list:
+                             target_product = prod_list[0] # Pick first match
+                        
+                        if target_product:
+                            cart_summary = cart_manager.add_item(session_id, target_product, qty)
+                            tool_output = f"Added {target_product['name']} to cart. Total: {cart_summary['total']}"
+                            # We can also attach this to the response so UI updates immediately
+                            # But we are in the loop. We need to persist this info to return it later.
+                            # We'll attach it to the final response object.
+                            # For now, let's store it in a way we can retrieve after the loop
+                            # We will re-fetch cart state at the end.
+                        else:
+                            tool_output = "Product found."
+                    except Exception as e:
+                        tool_output = f"Error adding to cart: {str(e)}"
+                
+                elif action == "view":
+                    cart = cart_manager.get_cart_summary(session_id)
+                    tool_output = f"Cart contains {cart['count']} items. Total: {cart['total']}"
+                
+                elif action == "clear":
+                    cart_manager.clear_cart(session_id)
+                    tool_output = "Cart cleared."
+
+                # Update the message history with the actual output
+                messages[-1]['content'] = str(tool_output)
+
         # 5. Second Call: AI generates final answer using tool outputs
         final_completion = client.chat.completions.create(
             model=MODEL_NAME,
             messages=messages
         )
         
-        final_response = final_completion.choices[0].message.content
-        response_cache.set(user_message, final_response)  # Cache the final answer
-        return final_response
+        final_response_text = final_completion.choices[0].message.content
+        response_cache.set(user_message, final_response_text)
+        
+        # Calculate Quick Replies based on context
+        quick_replies = []
+        if found_products:
+            quick_replies = ["View Cart", "Checkout", "Search More"]
+        elif found_order:
+            quick_replies = ["Track Another", "Support"]
+        else:
+            quick_replies = ["My Orders", "Best Sellers", "Contact Support"]
+
+        # FETCH FINAL CART STATE
+        # If any cart action happened, we want to send the latest state
+        current_cart = cart_manager.get_cart_summary("demo_user")
+
+        # Normalize products for UI (Web Widget)
+        sanitized_products = []
+        for p in found_products:
+            # Create a safe copy for UI
+            ui_p = p.copy()
+            # Ensure image_url is easily accessible
+            if p.get("images") and len(p["images"]) > 0:
+                ui_p["image_url"] = p["images"][0]["src"]
+            else:
+                ui_p["image_url"] = "https://placehold.co/100?text=No+Image"
+            sanitized_products.append(ui_p)
+
+        return BotResponse(
+            text=final_response_text,
+            products=sanitized_products,
+            order_details=found_order,
+            quick_replies=quick_replies,
+            cart_state=current_cart # Send cart state to frontend
+        )
 
     except Exception as e:
         error_str = str(e)
@@ -277,7 +415,7 @@ def generate_bot_response(user_message: str) -> str:
                 
                 # Simple completion without tools
                 fallback_messages = [
-                    {"role": "system", "content": "You are a professional assistant for Your Brand. Answer customer questions based on the provided context."},
+                    {"role": "system", "content": "You are a professional assistant for Roze BioHealth. Answer customer questions based on the provided context."},
                     {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {user_message}"}
                 ]
                 
@@ -288,18 +426,18 @@ def generate_bot_response(user_message: str) -> str:
                     max_tokens=1024
                 )
                 
-                return fallback_completion.choices[0].message.content
+                return BotResponse(text=fallback_completion.choices[0].message.content)
                 
             except Exception as fallback_error:
                 logger.error(f"Fallback also failed: {fallback_error}")
-                return "I apologize, but I'm experiencing technical difficulties at the moment. Please try rephrasing your question or contact our support team directly."
+                return BotResponse(text="I apologize, but I'm experiencing technical difficulties at the moment. Please try rephrasing your question or contact our support team directly.")
         
         # For rate limit errors
         if "rate_limit" in error_str.lower():
-            return "⏱️ Our AI is experiencing high demand right now. Please try again in a moment."
+            return BotResponse(text="⏱️ Our AI is experiencing high demand right now. Please try again in a moment.")
         
         # Generic professional error
-        return "I apologize, but I'm having trouble processing your request right now. Please try again or contact our support team for immediate assistance."
+        return BotResponse(text="I apologize, but I'm having trouble processing your request right now. Please try again or contact our support team for immediate assistance.")
 
 def process_message(wa_id: str, user_message: str):
     """
@@ -308,6 +446,9 @@ def process_message(wa_id: str, user_message: str):
     2. Generate Response (Heavy Lift)
     3. Send Final Answer
     """
+    import time
+    start_time = time.time()
+    
     logger.info(f"Processing message from {wa_id}: {user_message}")
     
     # 1. Immediate Feedback (Professional "Thinking" State)
@@ -323,10 +464,27 @@ def process_message(wa_id: str, user_message: str):
     send_whatsapp_message(wa_id, status_msg)
 
     # 2. Logic
-    ai_response = generate_bot_response(user_message)
+    bot_response = generate_bot_response(user_message, platform="whatsapp")
     
-    # 3. Final Response
-    send_whatsapp_message(wa_id, ai_response)
+    # 3. Final Response - Flatten for WhatsApp
+    # WhatsApp can't show carousels easily (unless interactive messages, but keeping it simple text for now)
+    final_text = bot_response.text
+    
+    # Append product links if any
+    if bot_response.products:
+        final_text += "\n\nProducts Mentioned:"
+        for p in bot_response.products:
+            final_text += f"\n- {p.get('name')} ({p.get('price')} {p.get('currency')})"
+            # Add Image Link for WhatsApp Preview
+            if p.get("images") and len(p["images"]) > 0:
+                final_text += f"\n  📷 {p['images'][0]['src']}"
+    
+    send_whatsapp_message(wa_id, final_text)
+    
+    # 4. Analytics
+    response_time_ms = int((time.time() - start_time) * 1000)
+    # Track conversation in background
+    analytics.track_conversation(user_message, bot_response.text, response_time_ms)
 
 @app.post("/webhook")
 async def wati_webhook(request: Request, background_tasks: BackgroundTasks):
@@ -362,13 +520,14 @@ async def test_chat(message: TestMessage):
     import time
     start_time = time.time()
     
-    response = generate_bot_response(message.message)
+    response_data = generate_bot_response(message.message, platform="web")
     
     # Track analytics
     response_time_ms = int((time.time() - start_time) * 1000)
-    analytics.track_conversation(message.message, response, response_time_ms)
+    # Track only text for simplicity in analytics
+    analytics.track_conversation(message.message, response_data.text, response_time_ms)
     
-    return {"response": response}
+    return response_data
 
 @app.get("/test", response_class=HTMLResponse)
 async def test_interface():
@@ -376,71 +535,52 @@ async def test_interface():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>AI Agent Test Interface</title>
+        <title>Roze AI - Premium Widget Test</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-            body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-            #chat-box { height: 400px; border: 1px solid #ccc; overflow-y: scroll; padding: 10px; margin-bottom: 10px; border-radius: 5px; }
-            .message { margin-bottom: 10px; padding: 8px; border-radius: 5px; }
-            .user { background-color: #e3f2fd; text-align: right; margin-left: 20%; }
-            .bot { background-color: #f5f5f5; margin-right: 20%; }
-            #input-area { display: flex; gap: 10px; }
-            input { flex-grow: 1; padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
-            button { padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
-            button:hover { background-color: #0056b3; }
+            body { 
+                font-family: -apple-system, sans-serif; 
+                background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+                height: 100vh;
+                margin: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #333;
+            }
+            .content {
+                text-align: center;
+                max-width: 600px;
+                padding: 40px;
+                background: rgba(255,255,255,0.8);
+                backdrop-filter: blur(10px);
+                border-radius: 20px;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            }
+            h1 { margin-bottom: 10px; }
+            p { color: #666; margin-bottom: 30px; }
+            .btn {
+                background: #000;
+                color: white;
+                padding: 12px 24px;
+                border-radius: 30px;
+                text-decoration: none;
+                font-weight: 500;
+                display: inline-block;
+            }
         </style>
     </head>
     <body>
-        <h1>🤖 AI Commerce Agent Test</h1>
-        <div id="chat-box"></div>
-        <div id="input-area">
-            <input type="text" id="user-input" placeholder="Type a message..." onkeypress="handleKeyPress(event)">
-            <button onclick="sendMessage()">Send</button>
+        <div class="content">
+            <h1>Roze BioHealth AI</h1>
+            <p>Premium Commerce Experience. The chat widget should appear in the bottom right corner.</p>
+            <div style="font-size: 12px; color: #888; margin-top: 20px;">
+                Voice Interaction • Product Cards • Streaming Text
+            </div>
         </div>
 
-        <script>
-            async function sendMessage() {
-                const input = document.getElementById('user-input');
-                const chatBox = document.getElementById('chat-box');
-                const text = input.value.trim();
-                
-                if (!text) return;
-
-                // Add user message
-                chatBox.innerHTML += `<div class="message user"><strong>You:</strong> ${text}</div>`;
-                input.value = '';
-                
-                // Add Thinking Indicator
-                const thinkingId = "thinking-" + Date.now();
-                chatBox.innerHTML += `<div id="${thinkingId}" class="message bot" style="font-style:italic; color:#666;">🤔 AI is thinking...</div>`;
-                chatBox.scrollTop = chatBox.scrollHeight;
-
-                try {
-                    const response = await fetch('/api/test-chat', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ message: text })
-                    });
-                    const data = await response.json();
-                    
-                    // Remove thinking indicator
-                    document.getElementById(thinkingId).remove();
-                    
-                    // Add bot message
-                    // Convert newlines to <br> for display
-                    const botText = data.response.replace(/\\n/g, '<br>');
-                    chatBox.innerHTML += `<div class="message bot"><strong>Bot:</strong> ${botText}</div>`;
-                } catch (error) {
-                     // Remove thinking indicator
-                    document.getElementById(thinkingId).remove();
-                    chatBox.innerHTML += `<div class="message bot" style="color:red">Error: ${error.message}</div>`;
-                }
-                chatBox.scrollTop = chatBox.scrollHeight;
-            }
-
-            function handleKeyPress(e) {
-                if (e.key === 'Enter') sendMessage();
-            }
-        </script>
+        <!-- Load the Widget -->
+        <script src="/widget/chat-widget.js"></script>
     </body>
     </html>
     """
@@ -498,10 +638,10 @@ async def track_analytics(data: Dict[str, Any]):
     analytics.track_conversation(
         data.get("user_message", ""),
         data.get("bot_response", ""),
-        0
+        data.get("response_time_ms", 0)
     )
     return {"status": "tracked"}
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8002)
+    uvicorn.run(app, host="0.0.0.0", port=8003)

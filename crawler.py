@@ -5,7 +5,7 @@ import time
 from rag import RAGHandler
 
 # Configuration
-START_URL = "https://yourdomain.com"
+START_URL = "https://rozebiohealth.com"
 MAX_PAGES = 50  # Limit to 50 pages for this initial run to be fast
 DELAY = 1  # Seconds between requests
 
@@ -16,7 +16,7 @@ rag = RAGHandler()
 
 def is_valid_url(url):
     parsed = urlparse(url)
-    return bool(parsed.netloc) and bool(parsed.scheme) and "yourdomain.com" in parsed.netloc
+    return bool(parsed.netloc) and bool(parsed.scheme) and "rozebiohealth.com" in parsed.netloc
 
 def clean_text(html_content):
     soup = BeautifulSoup(html_content, 'html.parser')

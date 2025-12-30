@@ -24,6 +24,20 @@ class RAGHandler:
             embedding_function=self.embedding_fn
         )
 
+    def reset_collection(self):
+        """
+        Deletes the entire collection to start fresh.
+        """
+        try:
+            self.client.delete_collection("dental_commerce_bot")
+            self.collection = self.client.get_or_create_collection(
+                name="dental_commerce_bot",
+                embedding_function=self.embedding_fn
+            )
+            print("Collection reset successfully.")
+        except Exception as e:
+            print(f"Error resetting collection: {e}")
+
     def ingest_data(self, file_path, tag):
         """
         Ingest data from a text file into the vector store.
