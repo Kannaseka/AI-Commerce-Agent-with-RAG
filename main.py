@@ -53,7 +53,7 @@ client = OpenAI(
 response_cache = ResponseCache(ttl_minutes=5)  # Cache responses for 5 minutes
 
 # Model Configuration
-MODEL_NAME = "llama-3.3-70b-versatile"  # Groq's best model for production
+MODEL_NAME = "llama-3.1-8b-instant"  # High speed, high rate limits 
 
 # ... (WATI Config remains same) ...
 
