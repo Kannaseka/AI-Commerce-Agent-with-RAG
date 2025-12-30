@@ -298,17 +298,34 @@ def generate_bot_response(user_message: str, platform: str = "whatsapp") -> BotR
             })
 
         # 5. Second Call: AI generates final answer using tool outputs
+        # We explicitly set tools=None here to tell the LLM it's time to talk to the user, not run tools.
         final_completion = client.chat.completions.create(
             model=MODEL_NAME,
-            messages=messages
+            messages=messages,
+            tools=None 
         )
         
         final_response_text = final_completion.choices[0].message.content
         
-        # Defensive Cleaning: Remove any hallucinated tool tags in the final text
-        # (Llama sometimes outputs its own representation of tools in text)
-        final_response_text = re.sub(r'<function.*?>.*?</function>', '', final_response_text, flags=re.DOTALL)
-        final_response_text = re.sub(r'\[tool_call:.*?\]', '', final_response_text)
+        # AGGRESSIVE CLEANING: Remove any hallucinated tool tags or function calls
+        # This handles multiple formats: <function=...>, [tool_call: ...], etc.
+        patterns = [
+            r'<function.*?>.*?</function>',
+            r'<function.*?>',
+            r'</function>',
+            r'\[tool_call:.*?\]',
+            r'\{"query":.*?\}',
+            r'\{"action":.*?\}',
+            r'search_store_products\(.*?\)',
+            r'manage_cart\(.*?\)',
+            r'get_order_status\(.*?\)'
+        ]
+        for pattern in patterns:
+            final_response_text = re.sub(pattern, '', final_response_text, flags=re.DOTALL | re.IGNORECASE)
+        
+        # Remove any leftover empty angle brackets or curly braces that might look technical
+        final_response_text = re.sub(r'<{1,2}[^>]*>{1,2}', '', final_response_text)
+        
         final_response_text = final_response_text.strip()
 
         response_cache.set(user_message, final_response_text)
