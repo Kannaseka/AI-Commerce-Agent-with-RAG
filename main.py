@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 import requests
 import json
+import re
 
 from rag import RAGHandler
 from woo_handler import WooCommerceHandler
@@ -334,8 +335,13 @@ def generate_bot_response(user_message: str, platform: str = "whatsapp") -> BotR
                     cart_manager.clear_cart(session_id)
                     tool_output = "Cart cleared."
 
-                # Update the message history with the actual output
-                messages[-1]['content'] = str(tool_output)
+                # ADD PROPER TOOL MESSAGE (Don't overwrite the assistant message!)
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "name": function_name,
+                    "content": str(tool_output)
+                })
 
         # 5. Second Call: AI generates final answer using tool outputs
         final_completion = client.chat.completions.create(
@@ -344,6 +350,13 @@ def generate_bot_response(user_message: str, platform: str = "whatsapp") -> BotR
         )
         
         final_response_text = final_completion.choices[0].message.content
+        
+        # Defensive Cleaning: Remove any hallucinated tool tags in the final text
+        # (Llama sometimes outputs its own representation of tools in text)
+        final_response_text = re.sub(r'<function.*?>.*?</function>', '', final_response_text, flags=re.DOTALL)
+        final_response_text = re.sub(r'\[tool_call:.*?\]', '', final_response_text)
+        final_response_text = final_response_text.strip()
+
         response_cache.set(user_message, final_response_text)
         
         # Calculate Quick Replies based on context (ROZE Categories)
