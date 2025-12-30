@@ -221,8 +221,10 @@ def generate_bot_response(user_message: str, platform: str = "whatsapp") -> BotR
             return BotResponse(text=final_response)
 
         # 4. Process Tool Calls
-        messages.append(response_message) # Add the assistant's "thought" (tool call request) to history
-
+        # IMPORTANT: Some models put tech-talk in the 'content' even when calling tools.
+        # We clear it to prevent it from leaking into the final user-facing response.
+        response_message.content = "" 
+        messages.append(response_message) 
 
         # Captured data for rich UI
         found_products = []
@@ -297,37 +299,30 @@ def generate_bot_response(user_message: str, platform: str = "whatsapp") -> BotR
                 "content": str(tool_output)
             })
 
-        # 5. Second Call: AI generates final answer using tool outputs
-        # We explicitly set tools=None here to tell the LLM it's time to talk to the user, not run tools.
+        # 5. Second Call: Final response generation (STRICTLY TEXT ONLY)
         final_completion = client.chat.completions.create(
             model=MODEL_NAME,
             messages=messages,
             tools=None 
         )
         
-        final_response_text = final_completion.choices[0].message.content
+        text = final_completion.choices[0].message.content or ""
         
-        # AGGRESSIVE CLEANING: Remove any hallucinated tool tags or function calls
-        # This handles multiple formats: <function=...>, [tool_call: ...], etc.
-        patterns = [
-            r'<function.*?>.*?</function>',
-            r'<function.*?>',
-            r'</function>',
-            r'\[tool_call:.*?\]',
-            r'\{"query":.*?\}',
-            r'\{"action":.*?\}',
-            r'search_store_products\(.*?\)',
-            r'manage_cart\(.*?\)',
-            r'get_order_status\(.*?\)'
-        ]
-        for pattern in patterns:
-            final_response_text = re.sub(pattern, '', final_response_text, flags=re.DOTALL | re.IGNORECASE)
+        # AGGRESSIVE CLEANING: Strip EVERY technical marker imaginable
+        # Remove anything in between < > or { } that looks like code/JSON
+        text = re.sub(r'<[^>]*>', '', text) # Remove all HTML-like tags
+        text = re.sub(r'\{[^{}]*"query"[^{}]*\}', '', text) # Remove JSON queries
+        text = re.sub(r'\{[^{}]*"action"[^{}]*\}', '', text) # Remove JSON actions
+        text = re.sub(r'search_store_products\(.*?\)', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'manage_cart\(.*?\)', '', text, flags=re.IGNORECASE)
         
-        # Remove any leftover empty angle brackets or curly braces that might look technical
-        final_response_text = re.sub(r'<{1,2}[^>]*>{1,2}', '', final_response_text)
-        
-        final_response_text = final_response_text.strip()
+        # Final cleanup: remove double spaces/newlines
+        text = re.sub(r'\n\s*\n', '\n', text)
+        text = text.strip()
 
+        logger.info(f"✨ Final Cleaned Response: {text[:50]}...")
+        
+        final_response_text = text
         response_cache.set(user_message, final_response_text)
         
         # Calculate Quick Replies based on context (ROZE Categories from Website)
