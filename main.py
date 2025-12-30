@@ -359,13 +359,13 @@ def generate_bot_response(user_message: str, platform: str = "whatsapp") -> BotR
 
         response_cache.set(user_message, final_response_text)
         
-        # Calculate Quick Replies based on context (ROZE Categories)
-        quick_replies = ["Dental Care", "Skin Care", "Lip Care", "Kits & Bundles", "Recent Orders"]
+        # Calculate Quick Replies based on context (ROZE Categories from Website)
+        quick_replies = ["New Items", "Most Popular", "Bundles", "Gift Set", "Bathroom Essentials", "Travel"]
         if found_products:
             # If products found, emphasize relevant categories or search
-            quick_replies = ["Dental Care", "Skin Care", "Bundles", "Search More"]
+            quick_replies = ["Most Popular", "Bundles", "Bathroom Essentials", "Search More"]
         elif found_order:
-            quick_replies = ["Track Another", "Support", "Shop Dental"]
+            quick_replies = ["Track Another", "Support", "All Items"]
 
         # FETCH FINAL CART STATE
         # If any cart action happened, we want to send the latest state
