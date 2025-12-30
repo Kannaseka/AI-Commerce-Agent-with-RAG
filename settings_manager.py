@@ -43,7 +43,7 @@ class SettingsManager:
             "secondary_color": "#6c757d",
             "text_color": "#ffffff",
             "bot_avatar": "🤖",
-            "welcome_message": "Hello! I'm your AI assistant. How can I help you today?",
+            "welcome_message": "Hello! I am from Roze BioHealth. How can I help you today?",
             "widget_size": "medium",
             
             # Behavior
