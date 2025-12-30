@@ -198,13 +198,9 @@ def generate_bot_response(user_message: str, session_id: str = "demo_user", plat
         return BotResponse(text=cached_response_str)
     
     messages = [
-        {"role": "system", "content": SYSTEM_PROMPT}
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": user_message}
     ]
-    
-    # 2. Get history and append current message
-    history = memory.get_history(session_id)
-    messages.extend(history)
-    messages.append({"role": "user", "content": user_message})
 
     try:
         # 2. First Call: Let AI decide if it needs tools
@@ -355,10 +351,6 @@ def generate_bot_response(user_message: str, session_id: str = "demo_user", plat
             else:
                 ui_p["image_url"] = "https://placehold.co/100?text=No+Image"
             sanitized_products.append(ui_p)
-
-        # 6. Save to Memory
-        memory.add_message(session_id, "user", user_message)
-        memory.add_message(session_id, "assistant", final_response_text)
 
         return BotResponse(
             text=final_response_text,
