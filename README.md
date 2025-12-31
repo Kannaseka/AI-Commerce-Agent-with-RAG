@@ -1,6 +1,6 @@
 # AI WhatsApp Commerce Bot 🤖🛍️
 
-This is a premium FastAPI-based backend for an AI-powered WhatsApp Commerce Assistant, specifically designed for **Roze BioHealth**. It integrates WATI (WhatsApp API), Groq (Llama 3.1 8B/70B), ChromaDB (Vector RAG), and WooCommerce to provide a professional, data-driven shopping experience.
+This is a premium FastAPI-based backend for an AI-powered WhatsApp Commerce Assistant, specifically designed for Ecommerce business. It integrates WATI (WhatsApp API), Groq (Llama 3.1 8B/70B), ChromaDB (Vector RAG), and WooCommerce to provide a professional, data-driven shopping experience.
 
 ## ✨ Features
 
@@ -24,7 +24,7 @@ This is a premium FastAPI-based backend for an AI-powered WhatsApp Commerce Assi
     GROQ_API_KEY=gsk_...
     WATI_TOKEN=...
     WATI_API_ENDPOINT=https://live-server-XXXX.wati.io
-    WOO_URL=https://rozebiohealth.com
+    WOO_URL=https://yourwebsite.com
     WOO_KEY=ck_...
     WOO_SECRET=cs_...
     ```
