@@ -15,7 +15,7 @@
 
 1. **Locate the Plugin:**
    ```
-   wordpress-plugin/roze-ai-chat/
+   wordpress-plugin/rzb-ai-chat/
    ```
 
 2. **Upload to WordPress:**
