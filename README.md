@@ -1,9 +1,17 @@
-# AI WhatsApp Commerce Bot
+# AI WhatsApp Commerce Bot 🤖🛍️
 
-This is a FastAPI-based backend for an AI-powered WhatsApp Commerce Assistant.
-It integrates WATI (WhatsApp API), OpenAI (GPT-4o), ChromaDB (RAG), and WooCommerce.
+This is a premium FastAPI-based backend for an AI-powered WhatsApp Commerce Assistant, specifically designed for **Roze BioHealth**. It integrates WATI (WhatsApp API), Groq (Llama 3.1 8B/70B), ChromaDB (Vector RAG), and WooCommerce to provide a professional, data-driven shopping experience.
 
-## Setup
+## ✨ Features
+
+-   **High-Performance AI**: Powered by Groq for lightning-fast response times.
+-   **Strict RAG Context**: Uses ChromaDB and Local Embeddings (`all-MiniLM-L6-v2`) to ensure 100% data adherence to product and FAQ files.
+-   **WooCommerce Engine**: Live interaction with WooCommerce for product search, status, and cart management.
+-   **Premium Admin Dashboard**: Sleek, glassmorphic dashboard for real-time analytics, behavior configuration, and appearance customization.
+-   **WhatsApp Native**: Seamless integration with WATI for professional messaging and order tracking.
+-   **Stateless Intelligence**: Optimized for standalone request processing with aggressive hallucination prevention.
+
+## 🚀 Quick Start
 
 1.  **Install Dependencies**:
     ```bash
@@ -11,41 +19,39 @@ It integrates WATI (WhatsApp API), OpenAI (GPT-4o), ChromaDB (RAG), and WooComme
     ```
 
 2.  **Environment Variables**:
-    Copy `.env` and fill in your API keys:
-    ```bash
-    OPENAI_API_KEY=sk-...
+    Create a `.env` file with the following:
+    ```env
+    GROQ_API_KEY=gsk_...
     WATI_TOKEN=...
     WATI_API_ENDPOINT=https://live-server-XXXX.wati.io
-    WOO_URL=...
-    WOO_KEY=...
-    WOO_SECRET=...
+    WOO_URL=https://rozebiohealth.com
+    WOO_KEY=ck_...
+    WOO_SECRET=cs_...
     ```
 
 3.  **Run the Server**:
     ```bash
-    uvicorn main:app --reload --port 8001
+    python main.py
     ```
-    The server will start at `http://localhost:8001`.
+    The server will start at `http://localhost:8003`.
 
-4.  **Expose to Internet (for WATI Webhook)**:
-    Use ngrok to expose your local server:
+4.  **Expose to Internet**:
+    Expose the port using ngrok:
     ```bash
-    ngrok http 8001
+    ngrok http 8003
     ```
-    Copy the HTTPS URL (e.g., `https://xyz.ngrok.io`) and set it as the Webhook URL in your WATI dashboard (append `/webhook`).
-    Example: `https://xyz.ngrok.io/webhook`
+    Set your WATI webhook to: `https://your-ngrok-url.ngrok.io/webhook`
 
-## Features
+## 📂 Project Structure
 
--   **RAG (Retrieval Augmented Generation)**: Automatically ingests `data/products.txt` and `data/faqs.txt` on startup.
--   **WooCommerce Integration**: Fetches product data (mocked or live if credentials provided).
--   **WATI Integration**: Receives messages and sends responses via WhatsApp.
--   **AI Logic**: Uses GPT-4o to generate friendly, sales-aware responses based on the context.
+-   `main.py`: Core logic, FastAPI routes, and Agentic Tool calling engine.
+-   `rag.py`: Vector store management and similarity retrieval.
+-   `woo_handler.py`: WooCommerce API interface and product formatting.
+-   `prompts.py`: Highly tuned system prompts for Roze BioHealth compliance.
+-   `admin/`: Premium glassmorphic administrative control panel.
+-   `widget/`: Embeddable web chat widget for cross-platform support.
+-   `data/`: Source documents for the knowledge base.
 
-## Project Structure
+## 🛠️ Admin Dashboard
 
--   `main.py`: Entry point, FastAPI app, Webhook handler.
--   `rag.py`: ChromaDB vector store logic.
--   `woo_handler.py`: WooCommerce API interaction.
--   `prompts.py`: System prompt for the AI.
--   `data/`: Text files for RAG context.
+Access the dashboard at `http://localhost:8003/admin` to customize the widget appearance, adjust AI creativity, and monitor real-time conversation analytics.
