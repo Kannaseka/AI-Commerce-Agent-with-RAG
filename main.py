@@ -311,19 +311,26 @@ def generate_bot_response(user_message: str, session_id: str = "demo_user", plat
         
         text = final_completion.choices[0].message.content or ""
         
-        # AGGRESSIVE CLEANING: Strip EVERY technical marker imaginable
+        # AGGRESSIVE CLEANING: Strip technical markers and artifacts
         # Remove anything in between < > or { } that looks like code/JSON
-        text = re.sub(r'<[^>]*>', '', text) # Remove all HTML-like tags
-        text = re.sub(r'\{[^{}]*"query"[^{}]*\}', '', text) # Remove JSON queries
-        text = re.sub(r'\{[^{}]*"action"[^{}]*\}', '', text) # Remove JSON actions
+        text = re.sub(r'<[^>]*>', '', text)  # Remove all HTML-like tags
+        text = re.sub(r'\{[^{}]*"query"[^{}]*\}', '', text)  # Remove JSON queries
+        text = re.sub(r'\{[^{}]*"action"[^{}]*\}', '', text)  # Remove JSON actions
         text = re.sub(r'search_store_products\(.*?\)', '', text, flags=re.IGNORECASE)
         text = re.sub(r'manage_cart\(.*?\)', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'search_knowledge_base\(.*?\)', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'check_order_status\(.*?\)', '', text, flags=re.IGNORECASE)
+        
+        # Remove common LLM artifacts if any leak
+        text = text.replace("Tool call:", "")
+        text = text.replace("Action:", "")
+        text = text.replace("Observation:", "")
         
         # Final cleanup: remove double spaces/newlines
-        text = re.sub(r'\n\s*\n', '\n', text)
+        text = re.sub(r'\n\s*\n', '\n\n', text)
         text = text.strip()
 
-        logger.info(f"✨ Final Cleaned Response: {text[:50]}...")
+        logger.info(f"✨ Final Cleaned Response: {text[:100]}...")
         
         final_response_text = text
         response_cache.set(user_message, final_response_text)
@@ -434,11 +441,12 @@ def process_message(wa_id: str, user_message: str):
     
     # 1. Immediate Feedback (Professional "Thinking" State)
     # We can be smart about this: simple heuristics to guess intents for the status message
-    lower_msg = user_message.lower()
-    if "order" in lower_msg or "track" in lower_msg or "#" in lower_msg:
+    if any(word in lower_msg for word in ["order", "track", "package", "where", "status"]):
         status_msg = "🔍 Checking live order status, please wait a moment..."
-    elif "price" in lower_msg or "stock" in lower_msg or "have" in lower_msg or "list" in lower_msg:
+    elif any(word in lower_msg for word in ["price", "cost", "stock", "have", "list", "buy", "product", "item", "catalog"]):
         status_msg = "🛒 Browsing our live catalog for you..."
+    elif any(word in lower_msg for word in ["ingredient", "benefit", "how", "what", "can", "use", "company", "info"]):
+        status_msg = "📚 Consulting our knowledge base..."
     else:
         status_msg = "🤔 Analyzing your request..."
         
