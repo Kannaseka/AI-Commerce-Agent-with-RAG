@@ -1,5 +1,5 @@
 === Roze AI Chat Assistant ===
-Contributors: rozebiohealth
+Contributors: Kannan
 Tags: ai, chat, woocommerce, customer-support, chatbot
 Requires at least: 5.0
 Tested up to: 6.4
@@ -15,7 +15,7 @@ Transform your customer support with an intelligent AI assistant. This plugin ad
 
 == Support ==
 
-For support and documentation, visit [rozebiohealth.com](https://rozebiohealth.com)
+For support and documentation, visit [yourwebsite.com](https://yourwebsite.com)
 
 = Features =
 
